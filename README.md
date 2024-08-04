@@ -39,7 +39,7 @@ Use `gsloc [command] --help` for more information about a command.
 
 ---
 
-**Example:**
+## Example:
 
 To generate localization files from a Google Spreadsheet, you would use the following command:
 
@@ -74,6 +74,7 @@ locales:
     locale: en
   - column: C
     locale: fr
+service_account_json: service_account.json
 ```
 
 ***How to get the spreadsheet id:***
@@ -83,3 +84,19 @@ The spreadsheet id is the long string of characters in the URL of the spreadshee
 `https://docs.google.com/spreadsheets/d/1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t1u2v3w4x5y6z7/edit#gid=0`
 
 the spreadsheet id is `1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t1u2v3w4x5y6z7`.
+
+***How to get the service account json:***
+
+1. Go to the Google Cloud Console. 
+2. Select the project that you want to use.
+3. In the sidebar on the left, expand APIs & Services and click on Credentials. 
+   - Now you have to be here: https://console.cloud.google.com/apis/credentials
+4. Click on Create credentials and select Service account.
+5. Fill in the required fields and click on Create.
+6. Click on Done.
+
+After creating the service account, click on the service account email and then click on Add key. Select JSON and click on Create. The JSON file will be downloaded to your computer.
+
+To get access to the private Google Spreadsheet, you have to share it with the email of the service account.
+
+---
