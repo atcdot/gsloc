@@ -18,7 +18,6 @@ func NewCommand() *Command {
 	c := &Command{}
 
 	c.initRootCmd()
-	cobra.OnInitialize(c.parseConfig)
 	c.initAttrs()
 
 	c.addCommands()

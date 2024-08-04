@@ -17,6 +17,7 @@ func (c *Command) addGenLocCmd() {
 		Short: "Generate localization files from google spreadsheets",
 		Long:  `Generate localization files from google spreadsheets`,
 		Run: func(_ *cobra.Command, _ []string) {
+			c.parseConfig()
 			err := c.genLoc()
 			if err != nil {
 				fmt.Println("Can't generate localization files:", err)
@@ -43,6 +44,10 @@ func validateConfig(conf *Config) error {
 		return errors.New("output_dir is required")
 	}
 
+	if conf.ServiceAccountJSON == "" {
+		return errors.New("service_account_json is required (See https://developers.google.com/workspace/guides/create-credentials?#service-account)")
+	}
+
 	return nil
 }
 
@@ -61,10 +66,7 @@ func (c *Command) genLoc() error {
 
 	opts := make([]option.ClientOption, 0)
 	opts = append(opts, option.WithScopes(sheets.SpreadsheetsReadonlyScope))
-
-	if c.config.ServiceAccountJSON != "" {
-		opts = append(opts, option.WithCredentialsFile(c.config.ServiceAccountJSON))
-	}
+	opts = append(opts, option.WithCredentialsFile(c.config.ServiceAccountJSON))
 
 	ctx := context.Background()
 
