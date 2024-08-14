@@ -19,6 +19,7 @@ type Config struct {
 	ServiceAccountJSON string         `yaml:"service_account_json" mapstructure:"service_account_json"`
 	SheetName          string         `yaml:"sheet_name" mapstructure:"sheet_name"`
 	OutputDir          string         `yaml:"output_dir" mapstructure:"output_dir"`
+	IsFlat             bool           `yaml:"is_flat" mapstructure:"is_flat"`
 }
 
 type LocaleColumn struct {
@@ -74,6 +75,7 @@ func generateConfigExample() error {
 		ServiceAccountJSON: "service-account.json",
 		SheetName:          "Sheet1",
 		OutputDir:          "./locales",
+		IsFlat:             false,
 	}
 
 	f, err := os.Create("conf.yaml")

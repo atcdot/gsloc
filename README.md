@@ -75,6 +75,7 @@ locales:
   - column: C
     locale: fr
 service_account_json: service_account.json
+is_flat: true
 ```
 
 ***How to get the spreadsheet id:***

@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"google.golang.org/api/option"
@@ -51,6 +53,11 @@ func validateConfig(conf *Config) error {
 	return nil
 }
 
+type translation struct {
+	key   string
+	value string
+}
+
 func (c *Command) genLoc() error {
 	fmt.Println("Generating localization files...")
 
@@ -90,49 +97,101 @@ func (c *Command) genLoc() error {
 	for _, locale := range c.config.Locales {
 		fmt.Println("Generating locale file for", locale.Locale)
 
-		localeFile, err := os.Create(fmt.Sprintf("%s/%s.json", c.config.OutputDir, locale.Locale))
-		if err != nil {
-			return fmt.Errorf("can't create locale file: %w", err)
-		}
-		defer localeFile.Close()
-
 		localeColumnIndex := GetColumnIndexByName(locale.Column)
 
-		_, err = localeFile.WriteString("{\n")
-		if err != nil {
-			return fmt.Errorf("can't write to locale file: %w", err)
-		}
-
+		rows := make([]translation, 0, len(resp.Values))
 		for i, row := range resp.Values {
 			if i < c.config.RowsToSkip {
 				continue
 			}
 
-			_, err = localeFile.WriteString(fmt.Sprintf("  \"%s\": \"%s\"", row[keyColumnIndex].(string), row[localeColumnIndex].(string)))
-			if err != nil {
-				return fmt.Errorf("can't write to locale file: %w", err)
-			}
-
-			if i < len(resp.Values)-1 {
-				_, err := localeFile.WriteString(",")
-				if err != nil {
-					return fmt.Errorf("can't write to locale file: %w", err)
-				}
-			}
-
-			_, err = localeFile.WriteString("\n")
-			if err != nil {
-				return fmt.Errorf("can't write to locale file: %w", err)
-			}
+			rows = append(rows, translation{
+				key:   row[keyColumnIndex].(string),
+				value: row[localeColumnIndex].(string),
+			})
 		}
 
-		_, err = localeFile.WriteString("}\n")
-		if err != nil {
-			return fmt.Errorf("can't write to locale file: %w", err)
+		switch c.config.IsFlat {
+		case true:
+			if err := writeLocaleFileFlat(c.config.OutputDir, locale, rows); err != nil {
+				return fmt.Errorf("can't write locale file: %w", err)
+			}
+		default:
+			if err := writeLocaleFileTree(c.config.OutputDir, locale, rows); err != nil {
+				return fmt.Errorf("can't write locale file: %w", err)
+			}
 		}
 	}
 
 	fmt.Println("Localization files generated successfully!")
+	return nil
+}
+
+func writeLocaleFileTree(outputDir string, locale LocaleColumn, rows []translation) error {
+	localeFile, err := os.Create(fmt.Sprintf("%s/%s.json", outputDir, locale.Locale))
+	if err != nil {
+		return fmt.Errorf("can't create locale file: %w", err)
+	}
+	defer localeFile.Close()
+
+	output := make(map[string]interface{})
+
+	// Заполнение output с использованием функции set
+	for _, row := range rows {
+		set(output, row.key, row.value)
+	}
+
+	jsonData, err := json.MarshalIndent(output, "", "  ")
+	if err != nil {
+		return fmt.Errorf("can't marshal locale file: %w", err)
+	}
+
+	_, err = localeFile.Write(jsonData)
+	if err != nil {
+		return fmt.Errorf("can't write to locale file: %w", err)
+	}
+
+	return nil
+}
+
+func writeLocaleFileFlat(outputDir string, locale LocaleColumn, rows []translation) error {
+	localeFile, err := os.Create(fmt.Sprintf("%s/%s.json", outputDir, locale.Locale))
+	if err != nil {
+		return fmt.Errorf("can't create locale file: %w", err)
+	}
+	defer localeFile.Close()
+
+	_, err = localeFile.WriteString("{\n")
+	if err != nil {
+		return fmt.Errorf("can't write to locale file: %w", err)
+	}
+
+	i := 0
+	for _, tr := range rows {
+		_, err = localeFile.WriteString(fmt.Sprintf("  \"%s\": \"%s\"", tr.key, tr.value))
+		if err != nil {
+			return fmt.Errorf("can't write to locale file: %w", err)
+		}
+
+		if i < len(rows)-1 {
+			_, err := localeFile.WriteString(",")
+			if err != nil {
+				return fmt.Errorf("can't write to locale file: %w", err)
+			}
+		}
+
+		_, err = localeFile.WriteString("\n")
+		if err != nil {
+			return fmt.Errorf("can't write to locale file: %w", err)
+		}
+
+		i++
+	}
+
+	_, err = localeFile.WriteString("}\n")
+	if err != nil {
+		return fmt.Errorf("can't write to locale file: %w", err)
+	}
 	return nil
 }
 
@@ -149,4 +208,19 @@ func pow(i int, i2 int) int {
 		return 1
 	}
 	return i * pow(i, i2-1)
+}
+
+// Set function to set nested map values based on dotted keys
+func set(m map[string]interface{}, key string, value string) {
+	keys := strings.Split(key, ".")
+	for i, k := range keys {
+		if i == len(keys)-1 {
+			m[k] = value
+		} else {
+			if _, ok := m[k]; !ok {
+				m[k] = make(map[string]interface{})
+			}
+			m = m[k].(map[string]interface{})
+		}
+	}
 }
