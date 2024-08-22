@@ -105,9 +105,19 @@ func (c *Command) genLoc() error {
 				continue
 			}
 
+			// skip empty rows and rows without locale
+			if len(row) <= keyColumnIndex || len(row) <= localeColumnIndex {
+				continue
+			}
+
+			valueStr, ok := row[localeColumnIndex].(string)
+			if !ok || valueStr == "" {
+				continue
+			}
+
 			rows = append(rows, translation{
 				key:   row[keyColumnIndex].(string),
-				value: row[localeColumnIndex].(string),
+				value: valueStr,
 			})
 		}
 
@@ -136,7 +146,6 @@ func writeLocaleFileTree(outputDir string, locale LocaleColumn, rows []translati
 
 	output := make(map[string]interface{})
 
-	// Заполнение output с использованием функции set
 	for _, row := range rows {
 		set(output, row.key, row.value)
 	}
